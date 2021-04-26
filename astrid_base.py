@@ -1,6 +1,7 @@
 import asterid as ad
 import asterid as astrid
 import numpy as np
+from random import randrange
 
 def run_iterations(ts, D, methods):
     fns = {
@@ -21,6 +22,24 @@ def run_iterations(ts, D, methods):
         D.fill_in_transient(ts, t)
     return t
 
+def reorder(x, y):
+    if x > y:
+        return y, x
+    return x, y
+
+def random_deletion(ts, D, rate):
+    n = len(ts)
+    totalmissing = round((n * (n - 1) / 2)*rate)
+    
+    cnt = 0
+    while cnt < totalmissing:
+        i = randrange(n)
+        j = randrange(n)
+        i, j = reorder(i, j)
+        if D.has(i, j):
+            D.setmask((i, j), 0)
+            cnt += 1
+
 def all_matrices(ts, trees):
     return [ad.DistanceMatrix(ts, t) for t in trees]
 
@@ -28,6 +47,16 @@ def taxon_pairs(ts):
     for i in range(len(ts)):
         for j in range(i, len(ts)):
             yield i, j
+
+def consensus(trees, minfreq=0.5):
+    import dendropy
+    res = dendropy.TreeList()
+    for treenewick in trees:
+        res.read(data=treenewick, schema="newick", rooting='force-unrooted')
+    # print(trees)
+    con = res.consensus(min_freq = minfreq)
+    con.is_rooted = False
+    return con.as_string(schema="newick")
 
 def matrix_elementwise(ts, Ds, f):
     R = ad.DistanceMatrix(ts)
